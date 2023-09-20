@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Project Management</title>
+    <style>
+        /* Add CSS styles for the button */
+        #calculateButton {
+            background-color: #F143C7; /* Set the background color to blue */
+            color: white; /* Set the text color to white */
+            font-weight: bold; /* Make the text bold */
+            border: 3px solid black; /* Remove the default button border */
+            padding: 10px 20px; /* Add padding for a better appearance */
+            cursor: pointer; /* Add a pointer cursor on hover */
+        }
+        #results {
+            background-color: #f0f0f0; /* Set the background color to grey */
+            padding: 10px; /* Add padding for spacing */
+        }
+        #results h2 {
+            color: #EE3716; /* Set the text color of the h2 element to blue */
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            border: 3px solid black;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+<center>
+    <h1>EARNED VALUE ANALYSIS</h1>
+</center>
+<form>
+    <strong>
+        <label for="bac"><span style="color: blue;"><h3>Enter BAC value (Budget at Completion):</span></h3></label>
+        <input type="number" id="bac" required style="border: 3px solid black;"><br>
+
+        <label for="planned_effort"><span style="color: blue;"><h3>Enter Planned Effort for Each Task (comma-separated):</span></h3></label>
+        <input type="text" id="planned_effort" required style="border: 3px solid black;"><br>
+
+        <label for="actual_effort"><span style="color: blue;"><h3>Enter Actual Effort for Each Task (comma-separated):</span></h3></label>
+        <input type="text" id="actual_effort" required style="border: 3px solid black;"><br><br>
+    </strong>
+    <center>
+        <input type="button" value="Calculate" id="calculateButton" onclick="calculateMetrics()"></b>
+    </center>
+</form>
+<div id="results">
+    <h2><center>RESULTS:</center></h2>
+    <div id="tableContainer"></div> <!-- Add a container for the table -->
+    <p><h4>Budgeted Cost of Work Performed (BCWP)&nbsp;: <span id="bcwp"></h4></span></p>
+    <p><h4>Budgeted Cost of Work Scheduled (BCWS)&nbsp;: <span id="bcws"></h4></span></p>
+    <p><h4>Percent Scheduled for Completion (PSC)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: <span id="psc"></h4></span></p>
+    <p><h4>Percent Complete (PC)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: <span id="pc"></h4></span></p>
+    <p><h4>Cost Performance Index (CPI)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: <span id="cpi"></h4></span></p>
+    <p><h4>Cost Variance (CV)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: <span id="cv"></h4></span></p>
+    <p><h4>Scheduled Performance Index (SPI)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: <span id="spi"></h4></span></p>
+    <p><h4>Scheduled Variance (SV)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: <span id="sv"></h4></span></p>
+    <p><h4>Actual Cost of Work Performed (ACWP)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: <span id="acwp"></h4></span></p>
+    <p id="error" style="color: red;"></p>
+</div>
+<script>
+    function calculateMetrics() {
+        const bac = parseFloat(document.getElementById('bac').value);
+        const plannedInput = document.getElementById('planned_effort').value.split(',').map(Number);
+        const actualInput = document.getElementById('actual_effort').value.split(',').map(Number);
+
+        // Check if BAC is a valid numeric value
+        if (isNaN(bac) || bac <= 0) {
+            document.getElementById('error').innerHTML = "<strong><h2>Please enter a valid positive number for BAC.</h2></strong>";
+            clearResults();
+            return;
+        }
+
+        // Check if both input fields are filled and don't share the same value
+        if (!document.getElementById('planned_effort').checkValidity() ||
+            !document.getElementById('actual_effort').checkValidity() ||
+            document.getElementById('planned_effort').value === document.getElementById('actual_effort').value) {
+            document.getElementById('error').innerHTML = "<strong><h2>Please fill in both input fields with valid and distinct numeric values.</h2</strong>";
+            clearResults();
+            return;
+        }
+
+        // Check for empty input or non-numeric values
+        if (plannedInput.some(isNaN) || actualInput.some(isNaN)) {
+            document.getElementById('error').innerHTML = "<strong><h2>Please enter valid numeric values.</h2></strong>";
+            clearResults();
+            return;
+        }
+
+        const bcws = plannedInput.reduce((acc, val) => acc + val, 0);
+
+        let bcwp = 0;
+        let index = 0;
+        for (const actual of actualInput) {
+            if (actual === 0) {
+                break;
+            }
+            bcwp += plannedInput[index];
+            index++;
+        }
+
+        const psc = bcws / bac; // Updated PSC formula
+        const pc = bcwp / bac; // Updated PC formula
+        const cpi = bcwp / actualInput.reduce((acc, val) => acc + val, 0);
+        const cv = bcwp - actualInput.reduce((acc, val) => acc + val, 0);
+        const spi = bcwp / bcws;
+        const sv = bcwp - bcws;
+
+        // Calculate ACWP (Actual Cost for Work Performed)
+        const acwp = actualInput.reduce((acc, val) => acc + val, 0);
+
+        // Clear any previous error message
+        document.getElementById('error').textContent = "";
+
+        // Display the results
+        document.getElementById('bcwp').textContent = bcwp;
+        document.getElementById('bcws').textContent = bcws;
+        document.getElementById('psc').textContent = psc.toFixed(2); // Display PSC with 2 decimal places
+        document.getElementById('pc').textContent = pc.toFixed(2); // Display PC with 2 decimal places
+        document.getElementById('cpi').textContent = cpi.toFixed(2);
+        document.getElementById('cv').textContent = cv;
+        document.getElementById('spi').textContent = spi.toFixed(2);
+        document.getElementById('sv').textContent = sv;
+        document.getElementById('acwp').textContent = acwp;
+
+        // Generate and display the table
+        generateTable(plannedInput, actualInput);
+    }
+
+    // Helper function to clear results
+    function clearResults() {
+        document.getElementById('bcwp').textContent = "";
+        document.getElementById('bcws').textContent = "";
+        document.getElementById('psc').textContent = "";
+        document.getElementById('pc').textContent = "";
+        document.getElementById('cpi').textContent = "";
+        document.getElementById('cv').textContent = "";
+        document.getElementById('spi').textContent = "";
+        document.getElementById('sv').textContent = "";
+        document.getElementById('acwp').textContent = "";
+    }
+
+    // Helper function to generate and display the table
+    function generateTable(plannedInput, actualInput) {
+        const tableContainer = document.getElementById('tableContainer');
+        tableContainer.innerHTML = ''; // Clear previous table
+
+        const table = document.createElement('table');
+        const thead = document.createElement('thead');
+        const tbody = document.createElement('tbody');
+
+        // Create table header (column names)
+        const headerRow = document.createElement('tr');
+        const columns = ['TASK', 'PLANNED EFFORT', 'ACTUAL EFFORT'];
+        for (const column of columns) {
+            const th = document.createElement('th');
+            th.textContent = column;
+            headerRow.appendChild(th);
+        }
+        thead.appendChild(headerRow);
+
+        // Create table rows with task numbers and values
+        for (let i = 0; i < plannedInput.length; i++) {
+            const row = document.createElement('tr');
+            const taskCell = document.createElement('td');
+            const plannedCell = document.createElement('td');
+            const actualCell = document.createElement('td');
+
+            taskCell.textContent = `Task ${i + 1}`;
+            plannedCell.textContent = plannedInput[i];
+            actualCell.textContent = actualInput[i];
+
+            row.appendChild(taskCell);
+            row.appendChild(plannedCell);
+            row.appendChild(actualCell);
+            tbody.appendChild(row);
+        }
+
+        table.appendChild(thead);
+        table.appendChild(tbody);
+        tableContainer.appendChild(table);
+    }
+</script>
+</body>
+</html>
